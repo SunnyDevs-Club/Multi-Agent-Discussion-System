@@ -5,7 +5,6 @@ It exposes an endpoint for the frontend to request the next turn in the conversa
 """
 
 from fastapi import FastAPI, HTTPException
-import uvicorn
 import os
 from pathlib import Path
 
