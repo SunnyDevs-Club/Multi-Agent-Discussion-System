@@ -119,10 +119,10 @@ def next_turn(request: ConversationRequest):
     )
 
 
-def dummy_agent_handler() -> AgentItem:
+def dummy_agent_handler(agent_id: str = "NASSEER", model: str = "gemini-2.5-flash") -> AgentItem:
     return AgentItem(
-        agent_id="TEST_AGENT_ID",
-        model_name="gemini-2.5-flash"
+        agent_id=agent_id,
+        model_name=model
     )
 
 
@@ -157,7 +157,8 @@ def list_agents():
     """
     if ENV == 'DUMMY':
         agent_items = [
-            dummy_agent_handler()
+            dummy_agent_handler(id='HONG'),
+            dummy_agent_handler(id='DRAGUNOV', model='zai-org/GLM-4.5')
         ]
 
         return BaseResponse(
@@ -227,6 +228,10 @@ def get_model_list(provider_name=None):
                 ModelItem(
                     model_name='gemini-2.5-flash',
                     provider='gemini'
+                ),
+                ModelItem(
+                    model_name='zai-org/GLM-4.5',
+                    provider='hf_serverless'
                 )
             ]
         )
