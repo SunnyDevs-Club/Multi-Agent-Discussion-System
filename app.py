@@ -15,10 +15,13 @@ flag = load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 if flag:
     print(".env file loaded successfully.")
 
+ENV = os.getenv('ENV')
+
 # Import the services
-from services.llm_service import generate_llm_response, GEMINI_API_MODELS, HF_SERVERLESS_MODELS
-from services.tts_service import generate_audio_base64, basic_clean_text, DEVICE # The model is loaded on import
-from services.storage_service import Agent, AgentStorage
+if ENV != 'DUMMY':
+    from services.llm_service import generate_llm_response, GEMINI_API_MODELS, HF_SERVERLESS_MODELS
+    from services.tts_service import generate_audio_base64, basic_clean_text, DEVICE # The model is loaded on import
+    from services.storage_service import Agent, AgentStorage
 
 from schemas.response_schemas import AgentMessage, AgentList, AgentItem, BaseResponse, ModelItem
 from schemas.request_schemas import ConversationRequest, AgentUpdateRequest
@@ -29,9 +32,6 @@ PROJ_DIR = Path(__file__).parent
 app = FastAPI(title="Multi-Agent Backend Orchestrator")
 
 agent_storage = AgentStorage()
-    
-# --- Global State & Constants ---
-MAX_TURNS_PER_CALL = 2 # Agent 1 speaks, then Agent 2 speaks
 
 
 @app.post("/next_turn", response_model=BaseResponse[AgentMessage])
@@ -40,6 +40,28 @@ def next_turn(request: ConversationRequest):
     Orchestrates the next turn for the specified agent (LLM + TTS).
     """
     current_agent_id = request.next_speaker_id
+
+    if ENV == 'DUMMY':
+        def load_base64_audio(file_name: str) -> str:
+            path = Path(file_name)
+
+            if not path.exists():
+                raise FileNotFoundError(f"{file_name} not found")
+
+            # Read and strip whitespace/newlines
+            return path.read_text(encoding="utf-8").strip()
+
+        audio_base64 = load_base64_audio("base64_sample.txt")
+
+        return BaseResponse(
+            status="success",
+            message="WARNING: THIS IS DUMMY RESPONSE"
+            data=AgentMessage(
+                speaker_id=current_agent_id,
+                text="<think>So here is the example of how LLM thinking will be shown in the response schema. Please do not show it in the response box</think> This is the sample response that you may get from the LLM response",
+                audio_base64=audio_base64
+            )
+        )
     
     # 1. Get the LLM response
     agent = agent_storage.get_agent(current_agent_id)
@@ -80,12 +102,11 @@ def next_turn(request: ConversationRequest):
     )
 
 
-# @app.get("/test", response_model=BaseResponse[str])
-# def test():
-#     return BaseResponse(
-#         status="success",
-#         data=agent_storage.get_agent("NASEER").get_system_prompt()
-#     )
+def dummy_agent_handler() -> AgentItem:
+    return AgentItem(
+        agent_id="TEST_AGENT_ID",
+        model_name="gemini-2.5-flash"
+    )
 
 
 @app.get("/agent/{agent_id}", response_model=BaseResponse[AgentItem])
@@ -93,6 +114,13 @@ def get_agent(agent_id: str = None):
     """
     Retrieve details of a specific persona by ID.
     """
+
+    if ENV == 'DUMMY':
+        return BaseResponse(
+            status="success",
+            message="WARNING: THIS IS DUMMY RESPONSE",
+            data=dummy_agent_handler()
+        )
     agent: Agent = agent_storage.get_agent(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found.")
@@ -104,11 +132,25 @@ def get_agent(agent_id: str = None):
         )
     )
 
+
 @app.get("/agents", response_model=BaseResponse[AgentList])
 def list_agents():
     """
     List all available agents.
     """
+    if ENV == 'DUMMY':
+        agent_items = [
+            dummy_agent_handler()
+        ]
+
+        return BaseResponse(
+            status="success",
+            message="WARNING: THIS IS DUMMY RESPONSE",
+            data=AgentList(
+                total=len(agent_items),
+                agents=agent_items
+            )
+        )
     agent_items = [
         AgentItem(
             **agent.to_dict()
@@ -129,6 +171,12 @@ def update_agent(agent_id: str, request: AgentUpdateRequest):
     """
     Update an existing agent's details.
     """
+    if ENV == 'DUMMY':
+        return BaseResponse(
+            status='success',
+            message='WARNING: THIS IS DUMMY RESPONSE',
+            data=dummy_agent_handler()
+        )
     try:
         agent_storage.update_agent(
             agent_id=agent_id,
@@ -147,30 +195,6 @@ def update_agent(agent_id: str, request: AgentUpdateRequest):
         )
     )
 
-# @app.post("/agents", response_model=BaseResponse[AgentItem])
-# def add_agent(request: AgentCreateRequest):
-#     """
-#     Add a new agent to the storage.
-#     """
-#     try:
-#         if agent_storage.get_agent(request.agent_id):
-#             raise ValueError(f"Agent with agent_id '{request.agent_id}' already exists.")
-
-#         agent_storage.add_agent(
-#             agent_id=request.agent_id,
-#             model_name=request.model_name
-#         )
-#     except ValueError as ve:
-#         raise HTTPException(status_code=400, detail=str(ve))
-    
-#     return BaseResponse(
-#         status="success",
-#         data=AgentItem(
-#             agent_id=request.agent_id,
-#             model_name=request.model_name
-#         )
-#     )
-
 
 @app.get("/models", response_model=BaseResponse[list[ModelItem]])
 def get_model_list(provider_name=None):
@@ -178,6 +202,17 @@ def get_model_list(provider_name=None):
     Retrieve the list of available models from the specified provider.
     If no provider is specified, return models from all providers.
     """
+    if ENV == 'DUMMY':
+        return BaseResponse(
+            status='success',
+            message='WARNING: THIS IS DUMMY RESPONSE',
+            data=[
+                ModelItem(
+                    model_name='gemini-2.5-flash',
+                    provider='gemini'
+                )
+            ]
+        )
     models = []
     if provider_name is not None and provider_name not in ["gemini", "hf_serverless"]:
         raise HTTPException(status_code=400, detail=f"Invalid provider_name '{provider_name}'. Must be 'gemini' or 'hf_serverless'.")
@@ -198,17 +233,3 @@ def get_model_list(provider_name=None):
         status="success",
         data=models
     )   
-
-
-
-if __name__ == "__main__":
-    # Ensure environment variable is set for local testing
-    if not os.environ.get("GEMINI_API_KEY"):
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print("!!! WARNING: GEMINI_API_KEY environment variable is NOT set. !!!")
-        print("!!! The LLM service will fail. Please set it via 'export GEMINI_API_KEY=...' !!!")
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-
-    print(f"Starting FastAPI server on device: {DEVICE}")
-    # Run the server
-    uvicorn.run(app, host="localhost", port=8000)
