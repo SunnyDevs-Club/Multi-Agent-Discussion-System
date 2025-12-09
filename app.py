@@ -55,7 +55,7 @@ def next_turn(request: ConversationRequest):
 
         return BaseResponse(
             status="success",
-            message="WARNING: THIS IS DUMMY RESPONSE"
+            message="WARNING: THIS IS DUMMY RESPONSE",
             data=AgentMessage(
                 speaker_id=current_agent_id,
                 text="<think>So here is the example of how LLM thinking will be shown in the response schema. Please do not show it in the response box</think> This is the sample response that you may get from the LLM response",
