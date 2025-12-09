@@ -5,6 +5,7 @@ It exposes an endpoint for the frontend to request the next turn in the conversa
 """
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import os
 from pathlib import Path
 
@@ -32,6 +33,22 @@ PROJ_DIR = Path(__file__).parent
 # --- FastAPI App Setup ---
 app = FastAPI(title="Multi-Agent Backend Orchestrator")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
+@app.head("/health_check")
+def check():
+    return {
+        "status": "success",
+        "message": "works well"
+    }, 200
 
 
 @app.post("/next_turn", response_model=BaseResponse[AgentMessage])
