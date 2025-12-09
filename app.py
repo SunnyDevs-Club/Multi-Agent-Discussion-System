@@ -157,8 +157,8 @@ def list_agents():
     """
     if ENV == 'DUMMY':
         agent_items = [
-            dummy_agent_handler(id='HONG'),
-            dummy_agent_handler(id='DRAGUNOV', model='zai-org/GLM-4.5')
+            dummy_agent_handler(agent_id='HONG'),
+            dummy_agent_handler(agent_id='DRAGUNOV', model='zai-org/GLM-4.5')
         ]
 
         return BaseResponse(
