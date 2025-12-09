@@ -22,6 +22,8 @@ if ENV != 'DUMMY':
     from services.tts_service import generate_audio_base64, basic_clean_text, DEVICE # The model is loaded on import
     from services.storage_service import Agent, AgentStorage
 
+    agent_storage = AgentStorage()
+
 from schemas.response_schemas import AgentMessage, AgentList, AgentItem, BaseResponse, ModelItem
 from schemas.request_schemas import ConversationRequest, AgentUpdateRequest
 
@@ -30,7 +32,6 @@ PROJ_DIR = Path(__file__).parent
 # --- FastAPI App Setup ---
 app = FastAPI(title="Multi-Agent Backend Orchestrator")
 
-agent_storage = AgentStorage()
 
 
 @app.post("/next_turn", response_model=BaseResponse[AgentMessage])
